@@ -169,6 +169,23 @@ svg.chart{display:block;width:100%;height:auto}
 .tab svg{width:22px;height:22px}
 .tab[aria-current="page"]{color:var(--accent);background:var(--surface-2)}
 
+#lock{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;overflow:auto;
+  padding:calc(40px + env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px))}
+#lock[hidden]{display:none}
+.lk-in{width:100%;max-width:330px;display:flex;flex-direction:column;align-items:center;margin:auto 0}
+.lk-title{font:700 22px var(--f-display);margin:0 0 8px;text-align:center}
+.lk-sub{color:var(--ink-2);font-size:14px;line-height:1.45;text-align:center;margin:0 0 22px}
+.dots{display:flex;gap:14px;margin-bottom:14px;height:18px}
+.dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--line-strong);box-sizing:border-box}
+.dots i.on{background:var(--accent);border-color:var(--accent)}
+.lk-msg{color:var(--bad);min-height:38px;font-size:13.5px;line-height:1.35;margin-bottom:10px;text-align:center}
+.pad{display:grid;grid-template-columns:repeat(3,76px);gap:14px;justify-content:center}
+.pad.off{opacity:.45;pointer-events:none}
+.pad button{display:flex;align-items:center;justify-content:center;padding:0;height:76px;border-radius:50%;background:var(--surface-2);font:600 28px var(--f-ui);color:var(--ink)}
+.pad button.gh{background:transparent;font-size:15px}
+.lk-link{margin-top:20px;color:var(--ink-2);font-weight:600;padding:10px 14px}
+.lk-btns{display:flex;flex-direction:column;gap:10px;width:100%}
+body.covered #app,body.covered #nav,body.covered #sheet{visibility:hidden}
 .hint-p{color:var(--ink-2);font-size:13.5px;line-height:1.45;margin:0 0 14px}
 button.note{display:block;width:100%;text-align:left;font:inherit;cursor:pointer;color:inherit}
 #filein{position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0}
@@ -205,6 +222,7 @@ button.note{display:block;width:100%;text-align:left;font:inherit;cursor:pointer
 <nav class="nav" id="nav" hidden><div class="nav-in" id="navin"></div></nav>
 <div id="sheet"></div>
 <input type="file" id="filein" accept=".json,application/json,text/plain" tabindex="-1" aria-hidden="true">
+<div id="lock" hidden></div>
 <div id="toast" class="toast" hidden></div>
 
 <script src="backup.js"></script>
@@ -294,7 +312,7 @@ const ICON={
   check:'<svg viewBox="0 0 24 24" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
 };
 
-const S={bk:null,hasRestore:false,persisted:false,db:null,months:[],meta:1000,cur:null,tab:'visao',status:'loading',sheet:null,subsOpen:false};
+const S={locked:true,legacy:false,lockMin:2,noLockUntil:0,booted:false,bk:null,hasRestore:false,persisted:false,db:null,months:[],meta:1000,cur:null,tab:'visao',status:'loading',sheet:null,subsOpen:false};
 const TABS=['visao','contas','historico'];
 
 function getCur(){return S.months.find(m=>m.id===S.cur)||null}
@@ -319,7 +337,7 @@ function patchMonth(id,patch){
 }
 function saveMeta(v){
   if(!S.db) return;
-  enqueue('cfg',()=>S.db.doc('config/settings').set({meta:v})).catch(e=>toast(failMsg(e)));
+  enqueue('cfg',()=>S.db.doc('config/settings').set({meta:v,lockMin:S.lockMin})).catch(e=>toast(failMsg(e)));
 }
 
 /* ---------- visões ---------- */
@@ -417,6 +435,7 @@ function catsHTML(c){
   return '<section class="card"><h2>Por categoria</h2>'+rows+'</section>';
 }
 function nudgeHTML(){
+  if(S.legacy) return '<button class="note" data-a="create-pin">Seus dados ainda não estão protegidos por PIN. Toque para criar o PIN.</button>';
   const base=(S.bk&&S.bk.at)||(S.bk&&S.bk.firstUse); if(!base) return '';
   const dias=Math.floor((Date.now()-Date.parse(base))/864e5), lim=(S.bk&&S.bk.at)?30:7;
   if(!(dias>=lim)) return '';
@@ -553,6 +572,7 @@ function stateHTML(){
 function render(){
   const app=$('app'), nav=$('nav');
   const m=getCur();
+  if(S.locked){ app.innerHTML=''; nav.hidden=true; return; }
   if(S.status!=='ready'||!m){
     app.innerHTML='<header class="top"><div class="mid"><div class="lbl">Painel financeiro</div><div class="mes">Finanças</div></div></header>'+stateHTML();
     nav.hidden=true; return;
@@ -670,7 +690,7 @@ function createNextMonth(){
   enqueue('m/'+id,()=>S.db.doc('months/'+id).set(doc)).then(()=>{S.cur=id;S.tab='visao';render();toast(doc.label+' criado a partir de '+(base.label||monthLabel(base.id))+'.');})
     .catch(e=>toast(failMsg(e)));
 }
-const APP_VERSION='1.1.1';
+const APP_VERSION='1.2.0';
 const fmtDia=iso=>{const d=new Date(iso);return isNaN(d)?'—':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});};
 function openSettings(){
   const last=S.months[S.months.length-1];
@@ -678,14 +698,18 @@ function openSettings(){
   const ex=last?[{a:'new-month',label:'Criar '+monthLabel(nextId(last.id))+' a partir do último mês'}]:[];
   ex.push({a:'export-backup',label:'Exportar backup (criptografado)'},{a:'import-backup',label:'Importar backup'});
   if(S.hasRestore) ex.push({a:'restore-point',label:'Desfazer a última importação'});
-  openSheet({title:'Ajustes',hint:bk+' Os dados ficam só neste aparelho'+(S.persisted?' (armazenamento protegido).':'. O iOS pode apagá-los se o app ficar muito tempo sem uso; por isso faça o backup todo mês.')+' Versão '+APP_VERSION+'.',
-    fields:[{k:'meta',label:'Meta de sobra por mês (R$)',type:'money',value:S.meta}],
+  ex.push(S.legacy?{a:'create-pin',label:'Criar PIN'}:{a:'change-pin',label:'Alterar PIN'});
+  if(!S.legacy) ex.push({a:'lock-now',label:'Bloquear agora'});
+  const MINS=['1 minuto','2 minutos','5 minutos'];
+  openSheet({title:'Ajustes',hint:bk+' Os dados ficam só neste aparelho'+(S.legacy?', ainda sem PIN.':', criptografados com o seu PIN.')+(S.persisted?' Armazenamento protegido.':' O iOS pode apagá-los se o app ficar muito tempo sem uso; por isso faça o backup todo mês.')+' Versão '+APP_VERSION+'.',
+    fields:[{k:'meta',label:'Meta de sobra por mês (R$)',type:'money',value:S.meta},{k:'lm',label:'Bloquear por inatividade após',type:'select',value:S.lockMin+(S.lockMin===1?' minuto':' minutos'),options:MINS}],
     extras:ex,
-    save:v=>{S.meta=v.meta;saveMeta(v.meta);render();}});
+    save:v=>{S.meta=v.meta;S.lockMin=parseInt(v.lm,10)||2;saveMeta(v.meta);render();}});
 }
 const diaArq=()=>new Date().toISOString().slice(0,10);
 function marcarBackup(){return LocalStore.doc('config/backup').set({at:new Date().toISOString(),firstUse:(S.bk&&S.bk.firstUse)||new Date().toISOString()});}
-function baixar(file){const u=URL.createObjectURL(file);const a=document.createElement('a');a.href=u;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000);}
+const pausaBloqueio=()=>{S.noLockUntil=Date.now()+120000;};
+function baixar(file){pausaBloqueio();const u=URL.createObjectURL(file);const a=document.createElement('a');a.href=u;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000);}
 function openExport(){
   openSheet({title:'Exportar backup',hint:'O arquivo é criptografado com a senha que você escolher, aqui no aparelho. Sem a senha ninguém consegue abrir, nem você: anote-a em lugar seguro.',saveLabel:'Criar arquivo',
     fields:[{k:'p1',label:'Senha (mínimo 8 caracteres)',type:'password'},{k:'p2',label:'Repetir senha',type:'password'}],
@@ -706,6 +730,7 @@ function askSaved(){
 function shareFile(){
   const file=S.pendingFile; if(!file) return 'Crie o arquivo de novo.';
   if(navigator.canShare&&navigator.canShare({files:[file]})){
+    pausaBloqueio();
     return navigator.share({files:[file]}).then(()=>{askSaved();},
       e=>{ if(e&&e.name==='AbortError') return 'Cancelado. Toque de novo para salvar.'; baixar(file); askSaved(); });
   }
@@ -739,7 +764,10 @@ document.addEventListener('click',e=>{
     case 'tab': location.hash=el.dataset.v; break;
     case 'share-again': shareFile(); break;
     case 'export-backup': closeSheet(); openExport(); break;
-    case 'import-backup': closeSheet(); $('filein').click(); break;
+    case 'import-backup': closeSheet(); pausaBloqueio(); $('filein').click(); break;
+    case 'create-pin': closeSheet(); showLock('create'); break;
+    case 'change-pin': closeSheet(); showLock('change'); break;
+    case 'lock-now': closeSheet(); lockNow(); break;
     case 'restore-point': closeSheet(); LocalStore.restorePoint().then(r=>{ if(!r){toast('Nada para desfazer.');return;}
       openSheet({title:'Desfazer a última importação',hint:'Volta aos dados que estavam aqui antes da importação de '+fmtDia(r.at)+'.',saveLabel:'Voltar a esses dados',fields:[],
         save:async()=>{await LocalStore.replaceAll(r.docs);S.cur=null;ensureCur();render();toast('Dados anteriores restaurados.');}}); }); break;
@@ -790,23 +818,133 @@ function ensureCur(){
   let saved=null; try{saved=localStorage.getItem('fin-cur')}catch(_){}
   S.cur=(saved&&S.months.some(x=>x.id===saved))?saved:(S.months.length?S.months[S.months.length-1].id:null);
 }
-async function start(){
-  readHash(); render();
-  let ok=false; try{ok=await LocalStore.init();}catch(_){ok=false;}
-  if(!ok){S.status='nodb';render();return;}
-  const db=LocalStore; S.db=db;
+/* ---------- bloqueio por PIN ---------- */
+const LK={mode:null,step:0,buf:'',first:'',old:'',msg:'',busy:false,wait:0,timer:null,forgot:false,sure:false};
+const LKT={
+  unlock:['Digite seu PIN','Seus dados estão protegidos neste aparelho.'],
+  create:[['Crie um PIN de 6 dígitos','Ele protege e criptografa seus dados. Se esquecer, só é possível recuperar pelo backup.'],['Repita o PIN','Digite o mesmo PIN mais uma vez.']],
+  change:[['PIN atual','Confirme o PIN atual para trocar.'],['Novo PIN','Escolha o novo PIN de 6 dígitos.'],['Repita o novo PIN','Digite o novo PIN mais uma vez.']]
+};
+function lkEnd(){clearInterval(LK.timer);LK.timer=null;LK.wait=0;}
+function showLock(mode){
+  lkEnd(); Object.assign(LK,{mode,step:0,buf:'',first:'',old:'',msg:'',busy:false,forgot:false,sure:false});
+  $('lock').hidden=false; lkRender();
+}
+function lkRender(){
+  const L=LK, box=$('lock');
+  if(L.mode==='intro'){
+    box.innerHTML='<div class="lk-in"><h1 class="lk-title">Proteger com PIN</h1><p class="lk-sub">Seus dados já estão neste aparelho, mas ainda sem PIN. Recomendo fazer um backup antes de criar o PIN. Depois do PIN, tudo fica criptografado.</p>'
+      +'<div class="lk-btns"><button class="btn ghost" data-lk="backup-first">Fazer backup agora</button><button class="btn pri" data-lk="make-pin" style="flex:0 0 auto">Criar PIN agora</button></div></div>';
+    return;
+  }
+  if(L.forgot){
+    box.innerHTML='<div class="lk-in"><h1 class="lk-title">Esqueci o PIN</h1><p class="lk-sub">Sem o PIN, os dados deste aparelho não podem ser lidos. O único caminho é apagar tudo aqui, criar um PIN novo e importar o seu último backup.</p>'
+      +'<div class="lk-btns"><button class="btn dng" data-lk="wipe">'+(L.sure?'Tocar de novo para apagar tudo':'Apagar dados deste aparelho')+'</button><button class="btn ghost" data-lk="back">Voltar</button></div></div>';
+    return;
+  }
+  const t=L.mode==='unlock'?LKT.unlock:LKT[L.mode][L.step];
+  const dots=[0,1,2,3,4,5].map(i=>'<i'+(i<L.buf.length?' class="on"':'')+'></i>').join('');
+  const keys=[1,2,3,4,5,6,7,8,9].map(n=>'<button data-lk="d" data-d="'+n+'" aria-label="'+n+'">'+n+'</button>').join('')
+    +(L.mode==='change'?'<button class="gh" data-lk="cancel">Cancelar</button>':'<span></span>')
+    +'<button data-lk="d" data-d="0" aria-label="0">0</button><button class="gh" data-lk="del" aria-label="Apagar dígito">⌫</button>';
+  const msg=L.busy?'Verificando…':(L.wait>0?'Muitas tentativas. Aguarde '+L.wait+' s.':L.msg);
+  box.innerHTML='<div class="lk-in"><h1 class="lk-title">'+esc(t[0])+'</h1><p class="lk-sub">'+esc(t[1])+'</p><div class="dots" role="img" aria-label="'+L.buf.length+' de 6 dígitos">'+dots+'</div>'
+    +'<div class="lk-msg" role="alert">'+esc(msg)+'</div><div class="pad'+((L.busy||L.wait>0)?' off':'')+'">'+keys+'</div>'
+    +(L.mode==='unlock'?'<button class="lk-link" data-lk="forgot">Esqueci o PIN</button>':'')+'</div>';
+}
+function lkWait(sec){
+  lkEnd(); LK.wait=sec;
+  LK.timer=setInterval(()=>{LK.wait--; if(LK.wait<=0){lkEnd();LK.msg='';} lkRender();},1000);
+}
+function lkFail(r){
+  if(r.wait){lkWait(r.wait);LK.msg='';}
+  else LK.msg='PIN incorreto. Mais '+Math.max(0,5-r.fails)+' tentativa'+(5-r.fails===1?'':'s')+' antes de uma pausa.';
+}
+async function lkSubmit(){
+  const L=LK, pin=L.buf; L.buf=''; L.busy=true; L.msg=''; lkRender();
+  try{
+    if(L.mode==='unlock'){
+      const r=await LocalStore.unlock(pin); L.busy=false;
+      if(r.ok){afterUnlock(false);return;}
+      lkFail(r);
+    } else if(L.mode==='create'){
+      if(L.step===0){L.first=pin;L.step=1;L.busy=false;}
+      else if(pin!==L.first){L.step=0;L.first='';L.busy=false;L.msg='Os PINs não conferem. Comece de novo.';}
+      else {await LocalStore.setupPin(pin);L.busy=false;await afterUnlock(true);return;}
+    } else if(L.mode==='change'){
+      if(L.step===0){const r=await LocalStore.verifyPin(pin);L.busy=false;if(r.ok){L.old=pin;L.step=1;}else lkFail(r);}
+      else if(L.step===1){L.first=pin;L.step=2;L.busy=false;}
+      else if(pin!==L.first){L.step=1;L.first='';L.busy=false;L.msg='Os PINs não conferem. Digite o novo PIN de novo.';}
+      else {await LocalStore.changePin(L.old,pin);L.busy=false;L.old='';$('lock').hidden=true;lastAct=Date.now();toast('PIN alterado.');return;}
+    }
+  }catch(e){L.busy=false;L.msg='Algo deu errado. Tente de novo.';console.error('lock:',e&&e.message);}
+  lkRender();
+}
+async function ensureBk(){ if(!S.bk&&LocalStore.isUnlocked()||!S.bk&&!LocalStore.hasLock()) await LocalStore.doc('config/backup').set({firstUse:new Date().toISOString(),at:null}); }
+async function afterUnlock(created){
+  lkEnd(); S.locked=false; S.legacy=false; $('lock').hidden=true; lastAct=Date.now();
+  if(!S.booted) await boot(); else { await ensureBk(); S.hasRestore=!!(await LocalStore.restorePoint()); LocalStore.refresh(); }
+  render();
+  if(created) toast('PIN criado. Seus dados agora ficam criptografados.');
+}
+$('lock').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-lk]'); if(!b) return; const a=b.dataset.lk, L=LK;
+  if(a==='d'){ if(L.busy||L.wait>0||L.buf.length>=6) return; L.buf+=b.dataset.d; lkRender(); if(L.buf.length===6) lkSubmit(); }
+  else if(a==='del'){ if(L.busy) return; L.buf=L.buf.slice(0,-1); lkRender(); }
+  else if(a==='cancel'){ lkEnd(); $('lock').hidden=true; }
+  else if(a==='forgot'){ L.forgot=true; L.sure=false; lkRender(); }
+  else if(a==='back'){ L.forgot=false; lkRender(); }
+  else if(a==='wipe'){
+    if(!L.sure){L.sure=true;lkRender();return;}
+    await LocalStore.wipe(); S.months=[];S.cur=null;S.bk=null;S.hasRestore=false;S.status='empty'; showLock('create');
+  }
+  else if(a==='make-pin') showLock('create');
+  else if(a==='backup-first'){ $('lock').hidden=true; S.locked=false; S.legacy=true; if(!S.booted) await boot(); render(); openExport(); }
+});
+document.addEventListener('keydown',e=>{
+  if($('lock').hidden||LK.forgot||LK.mode==='intro') return;
+  if(/^[0-9]$/.test(e.key)){ const b=document.querySelector('#lock [data-lk=d][data-d="'+e.key+'"]'); if(b) b.click(); }
+  else if(e.key==='Backspace'){ const b=document.querySelector('#lock [data-lk=del]'); if(b) b.click(); }
+});
+let lastAct=Date.now();
+function lockNow(){
+  if(S.locked||!LocalStore.hasLock()) return;
+  LocalStore.lock(); S.locked=true; S.months=[]; S.cur=null; S.bk=null; S.hasRestore=false; closeSheet();
+  render(); showLock('unlock');
+}
+['pointerdown','keydown','touchstart','scroll'].forEach(ev=>document.addEventListener(ev,()=>{lastAct=Date.now();},{passive:true,capture:true}));
+setInterval(()=>{ if(!S.locked&&LocalStore.hasLock()&&Date.now()-lastAct>=S.lockMin*60000) lockNow(); },5000);
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){ document.body.classList.add('covered'); if(Date.now()>=S.noLockUntil) lockNow(); }
+  else document.body.classList.remove('covered');
+});
+window.addEventListener('pagehide',()=>{ if(Date.now()>=S.noLockUntil) lockNow(); });
+
+/* ---------- início ---------- */
+async function boot(){
+  S.booted=true; const db=LocalStore; S.db=db;
   db.doc('config/settings').onSnapshot(s=>{
-    if(s.exists){const d=s.data(); if(isNum(d.meta)) S.meta=d.meta;}
+    if(S.locked) return;
+    if(s.exists){const d=s.data(); if(isNum(d.meta)) S.meta=d.meta; if([1,2,5].indexOf(d.lockMin)>=0) S.lockMin=d.lockMin;}
     if(S.status==='ready') render();
   });
-  db.doc('config/backup').onSnapshot(s=>{S.bk=s.exists?s.data():null; if(S.status==='ready') render();});
-  if(!S.bk) await db.doc('config/backup').set({firstUse:new Date().toISOString(),at:null});
+  db.doc('config/backup').onSnapshot(s=>{ if(S.locked) return; S.bk=s.exists?s.data():null; if(S.status==='ready') render(); });
+  await ensureBk();
   S.persisted=await db.persisted(); S.hasRestore=!!(await db.restorePoint());
   db.collection('months').onSnapshot(snap=>{
+    if(S.locked) return;
     S.months=snap.docs.map(d=>Object.assign({id:d.id},d.data())).sort((a,b)=>a.id<b.id?-1:1);
     S.status=S.months.length?'ready':'empty';
     ensureCur(); render();
   });
+}
+async function start(){
+  readHash(); render();
+  let info={ok:false}; try{info=await LocalStore.init();}catch(_){}
+  if(!info.ok){S.locked=false;S.status='nodb';render();return;}
+  if(info.state==='locked'){ showLock('unlock'); if(info.wait) lkWait(info.wait); lkRender(); return; }
+  if(info.legacy){ S.legacy=true; showLock('intro'); return; }
+  showLock('create');
 }
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 start();
