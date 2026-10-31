@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Painel Financeiro</title>
+<meta name="theme-color" content="#0E6762">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Finanças">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}
+</style>
+<style>
+/* Conceito: app de bolso em coluna única. O herói é a sobra do mês contra a meta; navegação por abas na base. */
+:root{
+  --bg:#F2F4EE; --surface:#FFFFFF; --surface-2:#E9EDE4; --ink:#171F18; --ink-2:#4A5648; --muted:#6F7B6B;
+  --line:#DCE2D4; --line-strong:#B9C3B0;
+  --accent:#0E6762; --accent-ink:#FFFFFF;
+  --good:#2B7A2F; --good-bg:#DCEED2; --bad:#B0321E; --bad-bg:#F7E0D9; --warn:#9A6400;
+  --c-fix:#4B6A87; --c-card:#8C2A2A; --c-save:#0E6762;
+  --k1:#0E6762; --k2:#B7791F; --k3:#7B4B94; --k4:#4B6A87; --k5:#B3541E; --k6:#6B7F2A; --k7:#8A9486;
+  --f-ui:system-ui,-apple-system,'SF Pro Text','Segoe UI',Roboto,sans-serif;
+  --f-display:system-ui,-apple-system,'SF Pro Display','Segoe UI',Roboto,sans-serif;
+  --f-mono:ui-monospace,'SF Mono',SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D110C; --surface:#161C15; --surface-2:#1F271D; --ink:#E8EEE2; --ink-2:#B7C1B1; --muted:#8D988A;
+    --line:#2A3427; --line-strong:#415039;
+    --accent:#5ECDC5; --accent-ink:#06221F;
+    --good:#86D486; --good-bg:#1C3A1E; --bad:#FF9D88; --bad-bg:#3B1E18; --warn:#E5B04A;
+    --c-fix:#86A9CB; --c-card:#E58B8B; --c-save:#5ECDC5;
+    --k1:#5ECDC5; --k2:#E2B058; --k3:#C49AD9; --k4:#86A9CB; --k5:#EE9A6A; --k6:#A9BE5E; --k7:#9CA797;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D110C; --surface:#161C15; --surface-2:#1F271D; --ink:#E8EEE2; --ink-2:#B7C1B1; --muted:#8D988A;
+  --line:#2A3427; --line-strong:#415039;
+  --accent:#5ECDC5; --accent-ink:#06221F;
+  --good:#86D486; --good-bg:#1C3A1E; --bad:#FF9D88; --bad-bg:#3B1E18; --warn:#E5B04A;
+  --c-fix:#86A9CB; --c-card:#E58B8B; --c-save:#5ECDC5;
+  --k1:#5ECDC5; --k2:#E2B058; --k3:#C49AD9; --k4:#86A9CB; --k5:#EE9A6A; --k6:#A9BE5E; --k7:#9CA797;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--f-ui); font-size:15px; line-height:1.45;
+  padding-block:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:560px;margin:0 auto;padding-bottom:104px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.lbl{font:500 11px/1.2 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* topo */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:12px 0 10px;display:flex;align-items:center;gap:8px}
+.top .mid{flex:1;min-width:0;text-align:center}
+.top .mes{font:700 20px/1.1 var(--f-display);letter-spacing:-.01em}
+.ib{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2);flex:none}
+.ib:hover{background:var(--surface-2)}
+.ib[disabled]{opacity:.3;cursor:default}
+.ib svg{width:22px;height:22px}
+
+/* cartões e blocos */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:12px}
+.card > h2,.sec-h{font:700 16px/1.2 var(--f-display);margin:0 0 12px;letter-spacing:-.005em}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sec-h small{font:500 12px var(--f-mono);color:var(--muted)}
+.flat{padding:0;overflow:hidden}
+.flat > .sec-h{padding:16px 16px 12px;margin:0}
+
+/* herói */
+.hero{padding:20px 16px 16px}
+.hero .big{font:800 46px/1 var(--f-display);letter-spacing:-.03em;margin:8px 0 4px}
+.hero .big.neg{color:var(--bad)}
+.hero .sub{color:var(--ink-2);font-size:13px}
+.track{position:relative;height:12px;border-radius:99px;background:var(--surface-2);margin:20px 0 8px}
+.track .fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--good)}
+.track .fill.bad{background:var(--bad)}
+.track .mk{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink)}
+.track-l{display:flex;justify-content:space-between;font:500 11px var(--f-mono);color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:99px;font:600 12.5px var(--f-ui)}
+.pill.ok{background:var(--good-bg);color:var(--good)}
+.pill.no{background:var(--bad-bg);color:var(--bad)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:16px}
+.stat{background:var(--surface);padding:11px 10px;min-width:0}
+.stat b{display:block;font:500 14px var(--f-mono);margin-top:4px;white-space:nowrap}
+.stat small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.neg{color:var(--bad)} .pos{color:var(--good)}
+.note{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--surface-2);color:var(--ink-2);font-size:13.5px}
+.note b{color:var(--ink)}
+
+/* barra do salário */
+.seg{display:flex;height:22px;border-radius:8px;overflow:hidden;gap:2px}
+.seg i{display:block;min-width:2px}
+.legend{margin-top:12px;display:grid;gap:8px}
+.legend div{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.legend .dot{width:10px;height:10px;border-radius:3px;flex:none}
+.legend .t{flex:1;min-width:0}
+.legend .v{font:500 13px var(--f-mono)}
+.legend .p{font:500 12px var(--f-mono);color:var(--muted);width:48px;text-align:right}
+
+/* barras de categoria */
+.cat{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:baseline;padding:7px 0}
+.cat .bar{grid-column:1 / -1;height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.cat .bar i{display:block;height:100%;border-radius:4px}
+.cat .n{font-size:13.5px}
+.cat .v{font:500 13px var(--f-mono)}
+.cat .v em{font-style:normal;color:var(--muted);margin-left:6px}
+
+/* listas */
+.row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;padding:10px 16px;border-top:1px solid var(--line)}
+.row.paid{background:var(--good-bg)}
+.row-main{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;min-width:0;width:100%}
+.nm{display:flex;flex-direction:column;min-width:0}
+.nm small{color:var(--muted);font-size:12px}
+.paid .nm small{color:var(--ink-2)}
+.val{font:500 14px var(--f-mono);white-space:nowrap}
+.chk{width:30px;height:30px;border-radius:50%;border:2px solid var(--line-strong);display:grid;place-items:center;flex:none;background:var(--surface)}
+.chk svg{width:16px;height:16px;opacity:0;stroke:#fff}
+.chk[aria-checked="true"]{background:var(--good);border-color:var(--good)}
+.chk[aria-checked="true"] svg{opacity:1}
+:root[data-theme="dark"] .chk svg{stroke:#0D110C}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chk svg{stroke:#0D110C}}
+.add{display:block;width:100%;padding:13px 16px;border-top:1px solid var(--line);color:var(--accent);font-weight:600;min-height:44px}
+.kv{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 16px;border-top:1px solid var(--line);min-height:44px;width:100%;font-size:14px}
+.kv span{color:var(--ink-2);min-width:0}
+.kv b{font:500 14px var(--f-mono);white-space:nowrap}
+.kv.tot{background:var(--surface-2)} .kv.tot span{color:var(--ink);font-weight:600}
+button.kv:hover{background:var(--surface-2)}
+.hint{color:var(--muted);font:400 12px var(--f-ui)}
+.chip{display:inline-block;padding:3px 9px;border-radius:99px;font:600 11.5px var(--f-ui);background:var(--surface-2);color:var(--ink-2)}
+.chip.on{background:var(--good-bg);color:var(--good)}
+.cardhead{display:flex;align-items:center;gap:10px;padding:14px 16px 10px}
+.cardhead h3{margin:0;font:700 16px var(--f-display);flex:1}
+.pay{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
+
+/* histórico */
+.hrow{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);width:100%;min-height:56px}
+.hrow .m{font:500 13px var(--f-mono)}
+.hrow .mid small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.hbar{height:6px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.hbar i{display:block;height:100%;background:var(--c-card);border-radius:4px}
+.hrow .r{text-align:right;font:500 13px var(--f-mono);white-space:nowrap}
+.hrow .r small{display:block;font:500 11.5px var(--f-mono)}
+svg.chart{display:block;width:100%;height:auto}
+.ct{fill:var(--muted);font:500 10px var(--f-mono)}
+.cv{fill:var(--ink-2);font:500 10px var(--f-mono)}
+.cm{stroke:var(--ink);stroke-width:1.2;stroke-dasharray:4 3;opacity:.7}
+
+/* abas */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);
+  padding:6px max(10px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px))}
+.nav-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:12px;color:var(--muted);font-size:11.5px;font-weight:600;min-height:52px}
+.tab svg{width:22px;height:22px}
+.tab[aria-current="page"]{color:var(--accent);background:var(--surface-2)}
+
+.hint-p{color:var(--ink-2);font-size:13.5px;line-height:1.45;margin:0 0 14px}
+button.note{display:block;width:100%;text-align:left;font:inherit;cursor:pointer;color:inherit}
+#filein{position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0}
+/* folha de edição */
+.scrim{position:fixed;inset:0;background:rgba(10,14,9,.5);z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--surface);border-radius:20px 20px 0 0;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  max-height:88%;overflow:auto;box-shadow:0 -8px 30px rgba(0,0,0,.25)}
+.sheet-in{max-width:560px;margin:0 auto}
+.sheet h3{margin:0 0 14px;font:700 18px var(--f-display)}
+.fld{display:block;margin-bottom:14px}
+.fld span{display:block;margin-bottom:6px;font:500 12px var(--f-mono);letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+.fld input,.fld select{width:100%;min-height:48px;padding:10px 12px;border-radius:12px;border:1px solid var(--line-strong);background:var(--bg);color:var(--ink);font:500 17px var(--f-ui)}
+.err{color:var(--bad);font-size:13px;min-height:18px;margin:-6px 0 8px}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.btn{min-height:48px;padding:0 18px;border-radius:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.btn.pri{background:var(--accent);color:var(--accent-ink);flex:1}
+.btn.ghost{background:var(--surface-2);color:var(--ink)}
+.btn.dng{background:var(--bad-bg);color:var(--bad)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:13.5px;max-width:90%}
+
+/* estados */
+.state{text-align:center;padding:56px 12px;color:var(--ink-2)}
+.state h2{font:700 20px var(--f-display);color:var(--ink);margin:0 0 8px}
+.skel{height:14px;border-radius:7px;background:var(--surface-2);margin:10px auto;max-width:260px}
+@media (prefers-reduced-motion:no-preference){.skel{animation:pulse 1.4s ease-in-out infinite}@keyframes pulse{50%{opacity:.5}}}
+@media (min-width:600px){.hero .big{font-size:54px}}
+</style>
+
+<div class="app" id="app">
+  <header class="top"><div class="mid"><div class="lbl">Painel financeiro</div><div class="mes">Carregando…</div></div></header>
+  <div class="state"><div class="skel"></div><div class="skel" style="max-width:200px"></div><div class="skel" style="max-width:230px"></div><p>Abrindo seus números…</p></div>
+</div>
+<nav class="nav" id="nav" hidden><div class="nav-in" id="navin"></div></nav>
+<div id="sheet"></div>
+<input type="file" id="filein" accept=".json,application/json,text/plain" tabindex="-1" aria-hidden="true">
+<div id="toast" class="toast" hidden></div>
+
+<script src="backup.js"></script>
+<script src="store.js"></script>
+<script>
+/*CORE-START*/
+const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const SHORT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const CATS=['Moradia','Dívidas e impostos','Trabalho','Saúde e seguros','Família','Pessoas','Viagem e lazer','Outros'];
+const TIPOS=['Fixa (repete todo mês)','Pontual (só este mês)'];
+const isNum=v=>typeof v==='number'&&isFinite(v);
+const sum=a=>(a||[]).reduce((s,x)=>s+(Number(x.v)||0),0);
+function parseBR(s){
+  s=String(s==null?'':s).trim();
+  if(s==='') return null;
+  if(s.indexOf('+')>0){
+    const parts=s.split('+').map(parseBR);
+    if(parts.some(p=>p===null||Number.isNaN(p))) return NaN;
+    return Math.round(parts.reduce((a,b)=>a+b,0)*100)/100;
+  }
+  s=s.replace(/R\$|\s/g,'');
+  if(s.indexOf(',')>=0) s=s.replace(/\./g,'').replace(',','.');
+  else if(/^\d{1,3}(\.\d{3})+$/.test(s)) s=s.replace(/\./g,'');
+  const n=Number(s); return isFinite(n)?n:NaN;
+}
+function monthLabel(id){return MESES[+id.slice(5,7)-1]+' '+id.slice(0,4)}
+function shortLabel(id){return SHORT[+id.slice(5,7)-1]}
+function nextId(id){
+  let y=+id.slice(0,4), m=+id.slice(5,7)+1;
+  if(m>12){m=1;y++}
+  return y+'-'+(m<10?'0':'')+m;
+}
+function calcMonth(m,meta){
+  const sal=Number(m.salario)||0, loli=Number(m.loli)||0, guard=Number(m.guardado)||0;
+  if(m.resumo){
+    const pf=Number(m.pf)||0, pj=Number(m.pj)||0, tot=Number(m.totalAPagar)||0;
+    const fatura=pf+pj, fixas=tot+loli-fatura, real=sal-tot-guard;
+    return {resumo:true,sal,loli,guard,pf,pj,fatura,fixas,tot,real,
+      pct:sal?fatura/sal:0, limite:sal-guard-meta-(fixas-loli), folga:real-meta};
+  }
+  const fixas=sum(m.fixas), ass=sum(m.subs), dentro=sum(m.cartao), fixosCartao=dentro+ass;
+  const pfEst=fixosCartao+(Number(m.pfOutros)||0);
+  const pfClosed=isNum(m.pfFech), pjClosed=isNum(m.pjFech);
+  const pf=pfClosed?m.pfFech:pfEst, pj=pjClosed?m.pjFech:(Number(m.pjEst)||0);
+  const fatura=pf+pj, gross=fixas+fatura, tot=gross-loli;
+  const real=sal-tot-guard;
+  const limite=sal-guard-meta-(fixas-loli);
+  const folga=limite-fatura;
+  const sobraMax=real+(pf-fixosCartao);
+  const pago=sum((m.fixas||[]).filter(x=>x.p))+(m.pagoPF?pf:0)+(m.pagoPJ?pj:0);
+  const cats=CATS.map(k=>({k,v:sum((m.fixas||[]).filter(x=>x.c===k))+sum((m.cartao||[]).filter(x=>x.c===k))}));
+  cats.push({k:'Assinaturas',v:ass},{k:'Cartão Nu PF (outros gastos)',v:pf-fixosCartao},{k:'Cartão Nu PJ',v:pj});
+  const reserva=(Number(m.reservaAnt)||0)+guard;
+  const pontual=sum((m.fixas||[]).filter(x=>x.u));
+  return {resumo:false,pontual,fixasRec:fixas-pontual,comprom:sal?tot/sal:0,sal,loli,guard,fixas,ass,dentro,fixosCartao,pfEst,pfClosed,pjClosed,pf,pj,fatura,gross,tot,real,
+    pct:sal?fatura/sal:0,limite,folga,sobraMax,pago,falta:gross-pago,cats,reserva};
+}
+function newMonthDoc(prev,pc,id){
+  const cp=a=>(a||[]).map(x=>Object.assign({},x));
+  return {
+    label:monthLabel(id), salario:prev.salario, loli:prev.loli, guardado:0, reservaAnt:pc.reserva,
+    fixas:cp(prev.fixas).filter(x=>!x.u).map(x=>Object.assign(x,{p:false})), cartao:cp(prev.cartao).filter(x=>!x.u), subs:cp(prev.subs),
+    pfOutros:Math.max(0,Math.round((pc.pf-pc.fixosCartao)*100)/100), pfFech:null,
+    pjEst:pc.pj, pjFech:null, pagoPF:false, pagoPJ:false
+  };
+}
+/*CORE-END*/
+
+(function(){
+'use strict';
+const brl=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+const pctF=new Intl.NumberFormat('pt-BR',{style:'percent',minimumFractionDigits:1,maximumFractionDigits:1});
+const money=n=>brl.format(n).replace(/ /g,' ');
+const pct=n=>pctF.format(n);
+const kfmt=v=>Math.abs(v)>=1000?(v/1000).toFixed(1).replace('.',',')+'k':String(Math.round(v));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,8);
+const $=id=>document.getElementById(id);
+
+const ICON={
+  prev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
+  gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>',
+  visao:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="9" rx="2"/><rect x="13.5" y="3" width="7.5" height="5" rx="2"/><rect x="13.5" y="11" width="7.5" height="10" rx="2"/><rect x="3" y="15" width="7.5" height="6" rx="2"/></svg>',
+  contas:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M3.5 6l1.3 1.3L7 5M3.5 12l1.3 1.3L7 11M3.5 18l1.3 1.3L7 17"/></svg>',
+  hist:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+};
+
+const S={bk:null,hasRestore:false,persisted:false,db:null,months:[],meta:1000,cur:null,tab:'visao',status:'loading',sheet:null,subsOpen:false};
+const TABS=['visao','contas','historico'];
+
+function getCur(){return S.months.find(m=>m.id===S.cur)||null}
+function calc(m){return calcMonth(m,S.meta)}
+
+/* ---------- gravação ---------- */
+const queues=new Map();
+function enqueue(key,fn){
+  const prev=queues.get(key)||Promise.resolve();
+  const next=prev.catch(()=>{}).then(fn);
+  queues.set(key,next);
+  return next;
+}
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.hidden=false;
+  clearTimeout(toast._t); toast._t=setTimeout(()=>{t.hidden=true},3200);
+}
+function failMsg(e){return e&&e.code==='invalid_argument'?'Sem permissão para editar neste painel.':'Não consegui salvar. Tente de novo.'}
+function patchMonth(id,patch){
+  if(!S.db) return Promise.resolve();
+  return enqueue('m/'+id,()=>S.db.doc('months/'+id).update(patch)).catch(e=>toast(failMsg(e)));
+}
+function saveMeta(v){
+  if(!S.db) return;
+  enqueue('cfg',()=>S.db.doc('config/settings').set({meta:v})).catch(e=>toast(failMsg(e)));
+}
+
+/* ---------- visões ---------- */
+function noDetail(){
+  return '<div class="card"><h2>Mês sem detalhes</h2><p class="hint" style="font-size:14px;margin:0">Este mês é anterior ao painel novo e só tem o resumo (salário, fatura e total). Os detalhes por conta existem a partir de outubro de 2026.</p></div>';
+}
+function heroHTML(m,c){
+  const meta=S.meta, ok=c.folga>=0;
+  const top=Math.max(meta*1.5,c.real,1);
+  const w=Math.max(0,Math.min(100,c.real/top*100)), mk=Math.min(100,meta/top*100);
+  const status=ok
+    ?'<span class="pill ok">Dentro da meta · folga de '+money(c.folga)+'</span>'
+    :'<span class="pill no">'+money(-c.folga)+' abaixo da meta</span>';
+  return '<section class="card hero">'
+   +'<div class="lbl">Sobra do mês</div>'
+   +'<div class="big mono-n'+(c.real<0?' neg':'')+'">'+money(c.real)+'</div>'
+   +'<div class="sub">depois de pagar contas, fatura'+(c.guard?' e guardar':'')+'</div>'
+   +'<div class="track" aria-hidden="true"><div class="fill'+(ok?'':' bad')+'" style="width:'+w+'%"></div><div class="mk" style="left:calc('+mk+'% - 1px)"></div></div>'
+   +'<div class="track-l"><span>R$ 0</span><span>meta '+money(meta)+'</span></div>'
+   +'<div style="margin-top:14px">'+status+'</div>'
+   +'<div class="stats">'
+     +'<div class="stat"><span class="lbl">Fatura</span><b>'+money(c.fatura)+'</b><small>'+pct(c.pct)+' do salário</small></div>'
+     +'<div class="stat"><span class="lbl">Limite</span><b>'+money(c.limite)+'</b><small>p/ bater a meta</small></div>'
+     +'<div class="stat"><span class="lbl">'+(ok?'Folga':'Excesso')+'</span><b class="'+(ok?'pos':'neg')+'">'+(ok?'+':'−')+money(Math.abs(c.folga))+'</b><small>na fatura</small></div>'
+   +'</div></section>';
+}
+function insightHTML(m,c){
+  const outros=c.pf-c.fixosCartao;
+  let t;
+  if(c.pfClosed){
+    t=c.folga>=0?'Fatura do Nu PF fechada e dentro do limite.'
+      :'Com a fatura do Nu PF fechada, a sobra ficou <b>'+money(-c.folga)+'</b> abaixo da meta.';
+  } else if(c.folga>=0){
+    t='Você ainda pode gastar até <b>'+money(c.folga)+'</b> a mais no cartão e sobrar a meta.';
+  } else if(-c.folga<=outros){
+    t='Para bater a meta, os outros gastos do Nu PF precisam ficar abaixo de <b>'+money(outros+c.folga)+'</b> (hoje '+money(outros)+').';
+  } else {
+    t='Mesmo zerando os outros gastos do Nu PF, a sobra seria <b>'+money(c.sobraMax)+'</b>, abaixo da meta. O piso da fatura (fixos no cartão + PJ) já é '+money(c.fixosCartao+c.pj)+'.';
+  }
+  return '<div class="note">'+t+'</div>';
+}
+function salaryBarHTML(c){
+  const parts=[
+    {k:'Contas fixas (já abatido o rateio)',v:c.fixas-c.loli,col:'var(--c-fix)'},
+    {k:'Fatura do cartão',v:c.fatura,col:'var(--c-card)'},
+    {k:'Guardado',v:c.guard,col:'var(--c-save)'},
+    {k:'Sobra',v:Math.max(c.real,0),col:c.real>=S.meta?'var(--good)':'var(--warn)'}
+  ].filter(p=>p.v>0);
+  const tot=parts.reduce((s,p)=>s+p.v,0)||1;
+  const bar=parts.map(p=>'<i style="width:'+(p.v/tot*100)+'%;background:'+p.col+'"></i>').join('');
+  const leg=parts.map(p=>'<div><span class="dot" style="background:'+p.col+'"></span><span class="t">'+esc(p.k)+'</span><span class="v">'+money(p.v)+'</span><span class="p">'+pct(p.v/(c.sal||1))+'</span></div>').join('');
+  const warn=c.real<0?'<p class="hint" style="margin:10px 0 0">Faltam '+money(-c.real)+' para fechar o mês.</p>':'';
+  return '<section class="card"><h2>Para onde vai o salário</h2><div class="seg" role="img" aria-label="Divisão do salário">'+bar+'</div><div class="legend">'+leg+'</div>'+warn+'</section>';
+}
+function nextOf(m){
+  const i=S.months.findIndex(x=>x.id===m.id);
+  return i>=0?S.months[i+1]||null:null;
+}
+function payHTML(m,c){
+  const p=c.gross?c.pago/c.gross:0, nx=nextOf(m);
+  const done=c.falta<0.005&&nx&&!nx.resumo
+    ?'<button class="btn pri" data-a="open-month" data-id="'+esc(nx.id)+'" style="width:100%;margin-top:14px">Tudo pago. Ver '+esc(nx.label||monthLabel(nx.id))+'</button>':'';
+  return '<section class="card"><h2>Pagamentos</h2>'
+   +'<div class="track" style="margin:6px 0 8px" aria-hidden="true"><div class="fill" style="width:'+Math.min(100,p*100)+'%"></div></div>'
+   +'<div class="track-l"><span>pago '+money(c.pago)+'</span><span>falta '+money(c.falta)+'</span></div>'
+   +'<p class="hint" style="margin:10px 0 0">Valores brutos, antes de abater o rateio. Marque as contas na aba Contas.</p>'+done+'</section>';
+}
+function nextCardHTML(m){
+  if(m.resumo) return '';
+  const nx=nextOf(m);
+  if(!nx){
+    const id=nextId(m.id), nome=MESES[+id.slice(5,7)-1].toLowerCase();
+    return '<section class="card"><div class="lbl">Mês seguinte</div><h2 style="margin:6px 0 8px">'+monthLabel(id)+' ainda não existe</h2>'
+     +'<p class="hint" style="font-size:13.5px;margin:0 0 14px">O que você gastar no cartão agora pesa no salário de '+nome+'. Crie o mês para acompanhar a fatura em aberto.</p>'
+     +'<button class="btn pri" data-a="new-month" style="width:100%">Criar '+monthLabel(id)+'</button></section>';
+  }
+  if(nx.resumo) return '';
+  const nc=calc(nx), ok=nc.folga>=0, nome=MESES[+nx.id.slice(5,7)-1].toLowerCase();
+  const pill=ok?'<span class="pill ok">Dentro da meta · folga de '+money(nc.folga)+'</span>'
+               :'<span class="pill no">'+money(-nc.folga)+' abaixo da meta</span>';
+  return '<section class="card flat"><div class="sec-h"><span>'+esc(nx.label||monthLabel(nx.id))+' em formação</span><small>fatura em aberto</small></div>'
+   +'<p class="hint" style="margin:-4px 16px 12px;font-size:13.5px">O que você passa no cartão agora sai do salário de '+nome+'.</p>'
+   +'<div style="padding:0 16px"><div class="stats" style="margin-top:0">'
+     +'<div class="stat"><span class="lbl">Fatura</span><b>'+money(nc.fatura)+'</b><small>'+pct(nc.pct)+' do salário</small></div>'
+     +'<div class="stat"><span class="lbl">Sobra</span><b class="'+(nc.real<0?'neg':'')+'">'+money(nc.real)+'</b><small>projetada</small></div>'
+     +'<div class="stat"><span class="lbl">Limite</span><b>'+money(nc.limite)+'</b><small>p/ bater a meta</small></div>'
+   +'</div><div style="margin:12px 0 14px">'+pill+'</div></div>'
+   +'<button class="kv" data-a="edit-next-pf"><span>Nu PF estimada</span><b>'+money(nc.pf)+'</b></button>'
+   +'<button class="kv" data-a="edit-next-pj"><span>Nu PJ estimada</span><b>'+money(nc.pj)+'</b></button>'
+   +'<button class="add" data-a="open-month" data-id="'+esc(nx.id)+'">Abrir '+esc(nx.label||monthLabel(nx.id))+'</button></section>';
+}
+function catsHTML(c){
+  const items=c.cats.filter(x=>x.v>0.004), tot=items.reduce((s,x)=>s+x.v,0)||1;
+  const rows=items.map((x,i)=>'<div class="cat"><span class="n">'+esc(x.k)+'</span><span class="v">'+money(x.v)+'<em>'+pct(x.v/tot)+'</em></span><span class="bar"><i style="width:'+(x.v/tot*100)+'%;background:var(--k'+(i%7+1)+')"></i></span></div>').join('');
+  return '<section class="card"><h2>Por categoria</h2>'+rows+'</section>';
+}
+function nudgeHTML(){
+  const base=(S.bk&&S.bk.at)||(S.bk&&S.bk.firstUse); if(!base) return '';
+  const dias=Math.floor((Date.now()-Date.parse(base))/864e5), lim=(S.bk&&S.bk.at)?30:7;
+  if(!(dias>=lim)) return '';
+  return '<button class="note" data-a="settings">'+((S.bk&&S.bk.at)?'Faz '+dias+' dias desde o último backup.':'Você ainda não fez backup dos dados deste aparelho.')+' Toque para exportar.</button>';
+}
+function resumoMesHTML(m,c){
+  const r=(k,v,cls)=>'<div class="kv'+(cls?' '+cls:'')+'"><span>'+k+'</span><b>'+v+'</b></div>';
+  return '<section class="card flat"><div class="sec-h"><span>Resumo do mês</span><small>'+pct(c.comprom)+' comprometido</small></div>'
+    +r('Remuneração',money(c.sal))+r('Despesas fixas',money(c.fixasRec))+r('Despesas pontuais',money(c.pontual))
+    +r('Fatura do cartão (PF + PJ)',money(c.fatura))+(c.loli?r('Rateio recebido','− '+money(c.loli)):'')
+    +r('Total a pagar',money(c.tot),'tot')+r('Já pago',money(c.pago))+r('Falta pagar',money(c.falta))
+    +r('Sobra do mês',money(c.real),'tot')+'</section>';
+}
+function visaoHTML(m,c){
+  if(c.resumo) return nudgeHTML()+heroHTML(m,c)+salaryBarHTML(c)+noDetail();
+  const obs=m.obs?'<div class="note">'+esc(m.obs)+'</div>':'';
+  return nudgeHTML()+heroHTML(m,c)+obs+insightHTML(m,c)+nextCardHTML(m)+resumoMesHTML(m,c)+salaryBarHTML(c)+payHTML(m,c)+catsHTML(c);
+}
+
+function rowFixa(x){
+  return '<div class="row'+(x.p?' paid':'')+'"><button class="chk" role="checkbox" aria-checked="'+(!!x.p)+'" aria-label="Pago: '+esc(x.n)+'" data-a="toggle-fixa" data-id="'+esc(x.id)+'">'+ICON.check+'</button>'
+   +'<button class="row-main" data-a="edit-fixa" data-id="'+esc(x.id)+'"><span class="nm">'+esc(x.n)+'<small>'+esc(x.c||'Sem categoria')+(x.u?' · pontual'+(x.d?' · '+fmtD(x.d):''):'')+'</small></span><span class="val">'+money(Number(x.v)||0)+'</span></button></div>';
+}
+function rowSimple(x,a){
+  return '<button class="kv" data-a="'+a+'" data-id="'+esc(x.id)+'"><span>'+esc(x.n)+'</span><b>'+money(Number(x.v)||0)+'</b></button>';
+}
+function editable(f,label,v,opt){
+  const shown=v==null?'<span class="hint">tocar para digitar</span>':money(v);
+  return '<button class="kv" data-a="edit-field" data-f="'+f+'" data-label="'+esc(label)+'"'+(opt?' data-opt="1"':'')+'><span>'+esc(label)+'</span><b>'+shown+'</b></button>';
+}
+function cardBlock(kind,m,c){
+  const isPF=kind==='pf';
+  const closed=isPF?c.pfClosed:c.pjClosed, used=isPF?c.pf:c.pj, paid=isPF?m.pagoPF:m.pagoPJ;
+  let body;
+  if(isPF){
+    body='<div class="kv"><span>Fixos no cartão <span class="hint">(terapia, vôlei, assinaturas)</span></span><b>'+money(c.fixosCartao)+'</b></div>'
+      +editable('pfOutros','Outros gastos previstos',Number(m.pfOutros)||0)
+      +'<button class="kv" data-a="edit-pf-total"><span>Fatura estimada</span><b>'+money(c.pfEst)+'</b></button>'
+      +editable('pfFech','Fatura fechada',isNum(m.pfFech)?m.pfFech:null,true);
+  } else {
+    body=editable('pjEst','Fatura estimada / parcial',Number(m.pjEst)||0)
+      +editable('pjFech','Fatura fechada',isNum(m.pjFech)?m.pjFech:null,true);
+  }
+  return '<section class="card flat"><div class="cardhead"><h3>Nu '+(isPF?'PF':'PJ')+'</h3><span class="chip'+(closed?' on':'')+'">'+(closed?'Fechada':'Estimada')+'</span>'
+   +'<div class="pay"><span>Pago</span><button class="chk" role="checkbox" aria-checked="'+(!!paid)+'" aria-label="Fatura Nu '+(isPF?'PF':'PJ')+' paga" data-a="toggle-'+kind+'">'+ICON.check+'</button></div></div>'
+   +body+'<div class="kv tot"><span>Valor usado na fatura</span><b>'+money(used)+'</b></div></section>';
+}
+function contasHTML(m,c){
+  if(c.resumo) return noDetail();
+  const rec=m.fixas.filter(x=>!x.u), pont=m.fixas.filter(x=>x.u).sort((x,y)=>(x.d||'9')<(y.d||'9')?-1:1);
+  const npago=rec.filter(x=>x.p).length, npp=pont.filter(x=>x.p).length;
+  const fixas='<section class="card flat"><div class="sec-h"><span>Contas fixas</span><small>'+npago+' de '+rec.length+' pagas</small></div>'
+    +rec.map(rowFixa).join('')
+    +'<div class="kv tot"><span>Total fixas (sem cartão)</span><b>'+money(c.fixasRec)+'</b></div>'
+    +'<button class="add" data-a="add-fixa">+ Adicionar conta</button></section>'
+    +'<section class="card flat"><div class="sec-h"><span>Pontuais do mês</span><small>'+(pont.length?npp+' de '+pont.length+' pagas':'não repetem no mês seguinte')+'</small></div>'
+    +(pont.length?pont.map(rowFixa).join('')+'<div class="kv tot"><span>Total pontuais</span><b>'+money(c.pontual)+'</b></div>':'<p class="hint" style="margin:0 0 8px">Nenhuma despesa pontual neste mês.</p>')
+    +'<button class="add" data-a="add-pontual">+ Adicionar despesa pontual</button></section>';
+  const cartoes=cardBlock('pf',m,c)+cardBlock('pj',m,c)
+    +'<section class="card flat"><div class="kv tot" style="border-top:0"><span>Fatura total (PF + PJ)</span><b>'+money(c.fatura)+'</b></div>'
+    +'<div class="kv"><span>% do salário</span><b>'+pct(c.pct)+'</b></div></section>';
+  const dentro='<section class="card flat"><div class="sec-h"><span>Dentro do cartão Nu PF</span><small>já na fatura</small></div>'
+    +m.cartao.map(x=>rowSimple(x,'edit-cartao')).join('')
+    +'<button class="add" data-a="add-cartao">+ Adicionar item</button>'
+    +'<button class="kv" data-a="toggle-subs"><span>Assinaturas ('+m.subs.length+')</span><b>'+money(c.ass)+' '+(S.subsOpen?'▴':'▾')+'</b></button>'
+    +(S.subsOpen?m.subs.map(x=>rowSimple(x,'edit-sub')).join('')+'<button class="add" data-a="add-sub">+ Adicionar assinatura</button>':'')
+    +'</section>';
+  const receita='<section class="card flat"><div class="sec-h"><span>Receita e reserva</span></div>'
+    +editable('salario','Salário recebido',Number(m.salario)||0)
+    +editable('loli','Rateio recebido (casa)',Number(m.loli)||0)
+    +editable('guardado','Guardado no mês',Number(m.guardado)||0)
+    +editable('reservaAnt','Reserva até o mês anterior',Number(m.reservaAnt)||0)
+    +'<div class="kv tot"><span>Total na reserva</span><b>'+money(c.reserva)+'</b></div></section>';
+  return fixas+cartoes+dentro+receita;
+}
+
+function chartSobra(list){
+  const W=360,H=200,pl=8,pr=8,pt=26,pb=26,meta=S.meta;
+  const vals=list.map(x=>x.c.real);
+  const hi=Math.max(meta,...vals,1)*1.12, lo=Math.min(0,...vals)*1.12;
+  const y=v=>pt+(hi-v)/(hi-lo)*(H-pt-pb);
+  const bw=(W-pl-pr)/list.length;
+  let g='';
+  list.forEach((x,i)=>{
+    const v=x.c.real, bx=pl+i*bw+bw*0.2, w=bw*0.6;
+    const y0=y(0), y1=y(v), top=Math.min(y0,y1), h=Math.max(1,Math.abs(y0-y1));
+    const col=v>=meta?'var(--good)':'var(--bad)';
+    g+='<rect x="'+bx.toFixed(1)+'" y="'+top.toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="4" fill="'+col+'"/>';
+    const ly=v>=0?top-5:top+h+11;
+    g+='<text class="cv" x="'+(bx+w/2).toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle">'+kfmt(v)+'</text>';
+    g+='<text class="ct" x="'+(bx+w/2).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle">'+shortLabel(x.m.id)+'</text>';
+  });
+  const my=y(meta).toFixed(1);
+  g+='<line class="cm" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+my+'" y2="'+my+'"/><text class="ct" x="'+pl+'" y="'+(my-5)+'">meta '+kfmt(meta)+'</text>';
+  g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y(0).toFixed(1)+'" y2="'+y(0).toFixed(1)+'" stroke="var(--line-strong)" stroke-width="1"/>';
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Sobra de cada mês comparada com a meta">'+g+'</svg>';
+}
+function historicoHTML(){
+  const list=S.months.map(m=>({m,c:calc(m)}));
+  if(!list.length) return '';
+  const hit=list.filter(x=>x.c.folga>=0).length;
+  const closed=list.filter(x=>x.c.resumo||(x.c.pfClosed&&x.c.pjClosed));
+  const last3=(closed.length?closed:list).slice(-3), avg=last3.reduce((s,x)=>s+x.c.fatura,0)/last3.length;
+  const maxPct=Math.max(0.6,...list.map(x=>x.c.pct));
+  const rows=list.slice().reverse().map(x=>{
+    const ok=x.c.folga>=0;
+    return '<button class="hrow" data-a="open-month" data-id="'+esc(x.m.id)+'"><span class="m">'+shortLabel(x.m.id)+' '+x.m.id.slice(2,4)+'</span>'
+     +'<span class="mid"><span class="hbar" style="display:block"><i style="width:'+(x.c.pct/maxPct*100)+'%"></i></span><small>fatura '+money(x.c.fatura)+' · '+pct(x.c.pct)+' do salário</small></span>'
+     +'<span class="r">'+money(x.c.real)+'<small class="'+(ok?'pos':'neg')+'">'+(ok?'+':'−')+money(Math.abs(x.c.folga))+'</small></span></button>';
+  }).join('');
+  return '<section class="card"><div class="sec-h"><span>Sobra por mês</span><small>'+hit+' de '+list.length+' na meta</small></div>'+chartSobra(list)
+    +'<p class="hint" style="margin:8px 0 0">Barras verdes batem a meta de '+money(S.meta)+'. Vermelhas ficaram abaixo.</p></section>'
+    +'<section class="card"><div class="lbl">Referência para a próxima fatura</div><div style="font:700 26px var(--f-display);margin:6px 0 2px">'+money(avg)+'</div><div class="hint">média da fatura (PF + PJ) dos '+last3.length+' últimos meses fechados</div></section>'
+    +'<section class="card flat"><div class="sec-h"><span>Mês a mês</span><small>sobra · folga</small></div>'+rows+'</section>'
+    +pontuaisHist(list);
+}
+
+function pontuaisHist(list){
+  const all=[]; list.forEach(x=>{ if(!x.c.resumo) (x.m.fixas||[]).filter(i=>i.u).forEach(i=>all.push({i,mid:x.m.id})); });
+  if(!all.length) return '';
+  all.sort((a,b)=>((b.i.d||b.mid+'-00')<(a.i.d||a.mid+'-00'))?-1:1);
+  const rows=all.slice(0,30).map(({i,mid})=>'<button class="hrow" data-a="open-month" data-id="'+esc(mid)+'" style="grid-template-columns:1fr auto"><span class="mid"><span class="nm" style="font-weight:600">'+esc(i.n)+'</span><small>'+shortLabel(mid)+' '+mid.slice(2,4)+(i.d?' · '+fmtD(i.d):'')+' · '+(i.p?'paga':'pendente')+'</small></span><span class="r">'+money(Number(i.v)||0)+'</span></button>').join('');
+  const tot=all.reduce((s,x)=>s+(Number(x.i.v)||0),0);
+  return '<section class="card flat"><div class="sec-h"><span>Despesas pontuais</span><small>'+all.length+' lançamentos · '+money(tot)+'</small></div>'+rows+'</section>';
+}
+function stateHTML(){
+  if(S.status==='nodb') return '<div class="state"><h2>Sem espaço para guardar dados</h2><p>Este navegador não permite guardar dados do app. Abra pelo Safari, fora da navegação privada, e adicione à tela de início.</p></div>';
+  if(S.status==='error') return '<div class="state"><h2>Não consegui abrir seus dados</h2><p>Feche e abra o app de novo. Se continuar assim, importe o seu último backup.</p></div>';
+
+  if(S.status==='empty') return '<div class="state"><h2>Nenhum dado neste aparelho</h2><p>Importe o seu arquivo de backup para começar. Seus números ficam só neste iPhone.</p><div class="btns" style="justify-content:center;margin-top:18px"><button class="btn pri" data-a="import-backup" style="flex:0 1 auto">Importar backup</button></div></div>';
+  return '<div class="state"><div class="skel"></div><div class="skel" style="max-width:200px"></div><div class="skel" style="max-width:230px"></div><p>Abrindo seus números…</p></div>';
+}
+
+function render(){
+  const app=$('app'), nav=$('nav');
+  const m=getCur();
+  if(S.status!=='ready'||!m){
+    app.innerHTML='<header class="top"><div class="mid"><div class="lbl">Painel financeiro</div><div class="mes">Finanças</div></div></header>'+stateHTML();
+    nav.hidden=true; return;
+  }
+  const c=calc(m), idx=S.months.findIndex(x=>x.id===m.id);
+  let body=S.tab==='contas'?contasHTML(m,c):S.tab==='historico'?historicoHTML():visaoHTML(m,c);
+  const head='<header class="top"><button class="ib" data-a="prev" aria-label="Mês anterior"'+(idx<=0?' disabled':'')+'>'+ICON.prev+'</button>'
+    +'<div class="mid"><div class="lbl">'+(S.tab==='historico'?'Painel financeiro':(!c.resumo&&!(c.pfClosed&&c.pjClosed)?'Mês · em aberto':'Mês'))+'</div><div class="mes">'+(S.tab==='historico'?'Histórico':esc(m.label||monthLabel(m.id)))+'</div></div>'
+    +'<button class="ib" data-a="next" aria-label="Próximo mês"'+(idx>=S.months.length-1?' disabled':'')+'>'+ICON.next+'</button>'
+    +'<button class="ib" data-a="settings" aria-label="Ajustes">'+ICON.gear+'</button></header>';
+  app.innerHTML=head+body;
+  $('navin').innerHTML=[['visao','Visão',ICON.visao],['contas','Contas',ICON.contas],['historico','Histórico',ICON.hist]]
+    .map(t=>'<button class="tab" data-a="tab" data-v="'+t[0]+'"'+(S.tab===t[0]?' aria-current="page"':'')+'>'+t[2]+'<span>'+t[1]+'</span></button>').join('');
+  nav.hidden=false;
+}
+
+/* ---------- folha de edição ---------- */
+function openSheet(spec){S.sheet=spec; renderSheet(); const f=document.querySelector('#sheet input,#sheet select'); if(f) f.focus();}
+function closeSheet(){S.sheet=null; $('sheet').innerHTML='';}
+function renderSheet(){
+  const sh=S.sheet, box=$('sheet');
+  if(!sh){box.innerHTML='';return;}
+  const f=(sh.fields||[]).map(fl=>{
+    if(fl.type==='date') return '<label class="fld"><span>'+esc(fl.label)+'</span><input id="sf-'+fl.k+'" type="date" value="'+esc(fl.value||'')+'"></label>';
+    if(fl.type==='password') return '<label class="fld"><span>'+esc(fl.label)+'</span><input id="sf-'+fl.k+'" type="password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" value=""></label>';
+    if(fl.type==='select') return '<label class="fld"><span>'+esc(fl.label)+'</span><select id="sf-'+fl.k+'">'+fl.options.map(o=>'<option'+(o===fl.value?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select></label>';
+    const val=fl.type==='money'?(fl.value==null?'':String(fl.value).replace('.',',')):esc(fl.value);
+    return '<label class="fld"><span>'+esc(fl.label)+'</span><input id="sf-'+fl.k+'" type="text"'+(fl.type==='money'?' inputmode="decimal"':'')+' autocomplete="off" value="'+val+'" placeholder="'+esc(fl.ph||'')+'"></label>';
+  }).join('');
+  const ex=(sh.extras||[]).map(e=>'<button class="btn ghost" data-a="'+e.a+'" style="width:100%;margin-bottom:10px">'+esc(e.label)+'</button>').join('');
+  box.innerHTML='<div class="scrim" data-a="close-sheet"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="'+esc(sh.title)+'"><div class="sheet-in"><h3>'+esc(sh.title)+'</h3>'+(sh.hint?'<p class="hint-p">'+esc(sh.hint)+'</p>':'')+f
+    +'<div class="err" id="sheet-err" role="alert"></div>'+ex
+    +'<div class="btns"><button class="btn pri" data-a="save-sheet" id="save-btn">'+esc(sh.saveLabel||'Salvar')+'</button>'+(sh.del?'<button class="btn dng" data-a="delete-sheet" id="del-btn">Excluir</button>':'')+'<button class="btn ghost" data-a="close-sheet">Cancelar</button></div></div></div>';
+}
+function saveSheet(){
+  const sh=S.sheet; if(!sh) return;
+  const vals={};
+  for(const fl of sh.fields){
+    let v=$('sf-'+fl.k).value;
+    if(fl.type==='money'){
+      const n=parseBR(v);
+      if(Number.isNaN(n)||(n===null&&!fl.optional)){$('sheet-err').textContent='Digite um valor válido, como 1.234,56.';return;}
+      v=n;
+    } else if(fl.type==='date'){
+      v=/^\d{4}-\d{2}-\d{2}$/.test(v)?v:null;
+    } else if(fl.type==='text'){
+      v=v.trim(); if(!v){$('sheet-err').textContent='Preencha o nome.';return;}
+    }
+    vals[fl.k]=v;
+  }
+  const r=sh.save(vals);
+  if(r&&typeof r.then==='function'){
+    const b=$('save-btn'); if(b){b.disabled=true;b.textContent='Aguarde…';}
+    r.then(res=>{ if(S.sheet!==sh) return; if(typeof res==='string'){const e=$('sheet-err');if(e)e.textContent=res;if(b){b.disabled=false;b.textContent=sh.saveLabel||'Salvar';}} else closeSheet(); })
+     .catch(()=>{ if(S.sheet!==sh) return; const e=$('sheet-err');if(e)e.textContent='Algo deu errado. Tente de novo.';if(b){b.disabled=false;b.textContent=sh.saveLabel||'Salvar';} });
+    return;
+  }
+  if(typeof r==='string'){$('sheet-err').textContent=r;return;}
+  closeSheet();
+}
+
+/* ---------- ações ---------- */
+function listPatch(m,field,fn){return patchMonth(m.id,{[field]:fn(m[field]||[])});}
+const VLBL='Valor (R$) · aceita 1430+78';
+function fixVals(v){ if('u' in v) v.u=String(v.u).indexOf('Pontual')===0; if('d' in v&&!v.u) v.d=null; return v; }
+const hoje=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const fmtD=iso=>iso?iso.slice(8,10)+'/'+iso.slice(5,7):'';
+function editItem(field,id,title,withCat){
+  const m=getCur(); const it=(m[field]||[]).find(x=>x.id===id); if(!it) return;
+  const fields=[{k:'n',label:'Nome',type:'text',value:it.n},{k:'v',label:VLBL,type:'money',value:it.v}];
+  if(withCat){
+    fields.push({k:'c',label:'Categoria',type:'select',value:it.c||'Outros',options:CATS});
+    fields.push({k:'u',label:'Tipo',type:'select',value:it.u?TIPOS[1]:TIPOS[0],options:TIPOS});
+    if(field==='fixas') fields.push({k:'d',label:'Data (só para pontuais)',type:'date',value:it.d||''});
+  }
+  openSheet({title,fields,
+    save:v=>{v=fixVals(v);listPatch(m,field,a=>a.map(x=>x.id===id?Object.assign({},x,v):x));},
+    del:()=>listPatch(m,field,a=>a.filter(x=>x.id!==id))});
+}
+function addItem(field,title,withCat,pontual){
+  const m=getCur();
+  const fields=[{k:'n',label:'Nome',type:'text',value:''},{k:'v',label:VLBL,type:'money',value:null,ph:'0,00'}];
+  if(withCat){
+    fields.push({k:'c',label:'Categoria',type:'select',value:'Outros',options:CATS});
+    fields.push({k:'u',label:'Tipo',type:'select',value:TIPOS[pontual?1:0],options:TIPOS});
+    if(field==='fixas') fields.push({k:'d',label:'Data (só para pontuais)',type:'date',value:pontual?hoje():''});
+  }
+  openSheet({title,fields,save:v=>{
+    v=fixVals(v);
+    const it=Object.assign({id:uid()},v); if(field==='fixas') it.p=false;
+    listPatch(m,field,a=>a.concat([it]));
+  }});
+}
+function editScalar(mm,f,label,opt){
+  openSheet({title:label,fields:[{k:'x',label:VLBL,type:'money',value:isNum(mm[f])?mm[f]:null,optional:opt,ph:opt?'deixe vazio para voltar à estimativa':'0,00'}],
+    save:v=>patchMonth(mm.id,{[f]:v.x})});
+}
+function editPfTotal(mm){
+  const c=calc(mm);
+  openSheet({title:'Fatura Nu PF estimada',fields:[{k:'x',label:'Total da fatura (R$) · aceita 1430+78',type:'money',value:Math.round(c.pfEst*100)/100,ph:'0,00'}],
+    save:v=>{
+      const out=Math.max(0,Math.round((v.x-c.fixosCartao)*100)/100);
+      if(v.x<c.fixosCartao) toast('Abaixo dos fixos no cartão ('+money(c.fixosCartao)+'). Usei só os fixos.');
+      patchMonth(mm.id,{pfOutros:out});
+    }});
+}
+function createNextMonth(){
+  const last=S.months[S.months.length-1];
+  const base=S.months.slice().reverse().find(x=>!x.resumo);
+  if(!last||!base){toast('Não há um mês completo para copiar.');return;}
+  const id=nextId(last.id);
+  if(S.months.some(x=>x.id===id)){S.cur=id;render();return;}
+  const doc=newMonthDoc(base,calc(base),id);
+  closeSheet();
+  enqueue('m/'+id,()=>S.db.doc('months/'+id).set(doc)).then(()=>{S.cur=id;S.tab='visao';render();toast(doc.label+' criado a partir de '+(base.label||monthLabel(base.id))+'.');})
+    .catch(e=>toast(failMsg(e)));
+}
+const APP_VERSION='1.1.0';
+const fmtDia=iso=>{const d=new Date(iso);return isNaN(d)?'—':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});};
+function openSettings(){
+  const last=S.months[S.months.length-1];
+  const bk=S.bk&&S.bk.at?'Último backup: '+fmtDia(S.bk.at)+'.':'Nenhum backup feito ainda.';
+  const ex=last?[{a:'new-month',label:'Criar '+monthLabel(nextId(last.id))+' a partir do último mês'}]:[];
+  ex.push({a:'export-backup',label:'Exportar backup (criptografado)'},{a:'import-backup',label:'Importar backup'});
+  if(S.hasRestore) ex.push({a:'restore-point',label:'Desfazer a última importação'});
+  openSheet({title:'Ajustes',hint:bk+' Os dados ficam só neste aparelho'+(S.persisted?' (armazenamento protegido).':'. O iOS pode apagá-los se o app ficar muito tempo sem uso; por isso faça o backup todo mês.')+' Versão '+APP_VERSION+'.',
+    fields:[{k:'meta',label:'Meta de sobra por mês (R$)',type:'money',value:S.meta}],
+    extras:ex,
+    save:v=>{S.meta=v.meta;saveMeta(v.meta);render();}});
+}
+const diaArq=()=>new Date().toISOString().slice(0,10);
+function marcarBackup(){return LocalStore.doc('config/backup').set({at:new Date().toISOString(),firstUse:(S.bk&&S.bk.firstUse)||new Date().toISOString()});}
+function baixar(file){const u=URL.createObjectURL(file);const a=document.createElement('a');a.href=u;a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000);}
+function openExport(){
+  openSheet({title:'Exportar backup',hint:'O arquivo é criptografado com a senha que você escolher, aqui no aparelho. Sem a senha ninguém consegue abrir, nem você: anote-a em lugar seguro.',saveLabel:'Criar arquivo',
+    fields:[{k:'p1',label:'Senha (mínimo 8 caracteres)',type:'password'},{k:'p2',label:'Repetir senha',type:'password'}],
+    save:async v=>{
+      if(v.p1.length<8) return 'Use pelo menos 8 caracteres.';
+      if(v.p1!==v.p2) return 'As senhas não conferem.';
+      const text=await Backup.encrypt(LocalStore.dump(),v.p1);
+      S.pendingFile=new File([text],'painel-financeiro-backup-'+diaArq()+'.json',{type:'application/json'});
+      openSheet({title:'Backup pronto',hint:'Toque em Salvar e escolha o Google Drive ou Arquivos. Guarde-o fora do iPhone.',saveLabel:'Salvar / compartilhar',fields:[],save:shareFile});
+    }});
+}
+function shareFile(){
+  const file=S.pendingFile; if(!file) return 'Crie o arquivo de novo.';
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    return navigator.share({files:[file],title:'Backup do Painel Financeiro'}).then(()=>marcarBackup()).then(()=>{S.pendingFile=null;toast('Backup salvo.');},
+      e=>(e&&e.name==='AbortError')?'Cancelado. Toque de novo para salvar.':(baixar(file),marcarBackup().then(()=>{S.pendingFile=null;toast('Arquivo baixado.');})));
+  }
+  baixar(file); S.pendingFile=null; marcarBackup(); toast('Arquivo baixado.');
+}
+function resumoBackup(c){
+  const ids=Object.keys(c.docs).filter(k=>k.startsWith('months/')).map(k=>k.slice(7)).sort();
+  return ids.length+' meses ('+monthLabel(ids[0])+' a '+monthLabel(ids[ids.length-1])+')'+(c.exportedAt?', gerado em '+fmtDia(c.exportedAt):'');
+}
+function confirmImport(c){
+  const tem=S.months.length>0;
+  openSheet({title:'Importar backup',hint:resumoBackup(c)+'. '+(tem?'Isto substitui os dados atuais deste aparelho. Antes, guardo uma cópia deles para você poder desfazer.':'Eles passam a ficar neste aparelho.'),saveLabel:tem?'Substituir meus dados':'Importar',fields:[],
+    save:async()=>{await LocalStore.replaceAll(c.docs);S.hasRestore=tem||S.hasRestore;S.status='ready';S.cur=null;ensureCur();render();toast('Backup importado.');}});
+}
+function onFile(txt){
+  let r; try{r=Backup.inspect(txt);}catch(e){toast(e.message);return;}
+  if(!r.encrypted){confirmImport(r.content);return;}
+  openSheet({title:'Senha do backup',hint:'Digite a senha que você usou ao exportar este arquivo.',saveLabel:'Abrir',fields:[{k:'p',label:'Senha',type:'password'}],
+    save:async v=>{let c;try{c=await Backup.decrypt(r.file,v.p);}catch(e){return e.message;}confirmImport(c);}});
+}
+$('filein').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0]; e.target.value='';
+  if(!f) return;
+  if(f.size>5*1024*1024){toast('Arquivo grande demais para ser um backup.');return;}
+  const fr=new FileReader(); fr.onload=()=>onFile(String(fr.result)); fr.onerror=()=>toast('Não consegui ler o arquivo.'); fr.readAsText(f);
+});
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-a]'); if(!el) return;
+  const a=el.dataset.a, m=getCur();
+  switch(a){
+    case 'tab': location.hash=el.dataset.v; break;
+    case 'export-backup': closeSheet(); openExport(); break;
+    case 'import-backup': closeSheet(); $('filein').click(); break;
+    case 'restore-point': closeSheet(); LocalStore.restorePoint().then(r=>{ if(!r){toast('Nada para desfazer.');return;}
+      openSheet({title:'Desfazer a última importação',hint:'Volta aos dados que estavam aqui antes da importação de '+fmtDia(r.at)+'.',saveLabel:'Voltar a esses dados',fields:[],
+        save:async()=>{await LocalStore.replaceAll(r.docs);S.cur=null;ensureCur();render();toast('Dados anteriores restaurados.');}}); }); break;
+    case 'prev': case 'next':{
+      const i=S.months.findIndex(x=>x.id===S.cur), j=a==='prev'?i-1:i+1;
+      if(S.months[j]){S.cur=S.months[j].id;try{localStorage.setItem('fin-cur',S.cur)}catch(_){}render();window.scrollTo(0,0);}
+      break;}
+    case 'open-month': S.cur=el.dataset.id;try{localStorage.setItem('fin-cur',S.cur)}catch(_){} location.hash='visao'; S.tab='visao'; render(); window.scrollTo(0,0); break;
+    case 'toggle-fixa': listPatch(m,'fixas',arr=>arr.map(x=>x.id===el.dataset.id?Object.assign({},x,{p:!x.p}):x)); break;
+    case 'toggle-pf': patchMonth(m.id,{pagoPF:!m.pagoPF}); break;
+    case 'toggle-pj': patchMonth(m.id,{pagoPJ:!m.pagoPJ}); break;
+    case 'toggle-subs': S.subsOpen=!S.subsOpen; render(); break;
+    case 'edit-fixa': editItem('fixas',el.dataset.id,'Editar conta',true); break;
+    case 'add-fixa': addItem('fixas','Nova conta',true,false); break;
+    case 'add-pontual': addItem('fixas','Nova despesa pontual',true,true); break;
+    case 'edit-cartao': editItem('cartao',el.dataset.id,'Editar item do cartão',true); break;
+    case 'add-cartao': addItem('cartao','Novo item no cartão',true); break;
+    case 'edit-sub': editItem('subs',el.dataset.id,'Editar assinatura',false); break;
+    case 'add-sub': addItem('subs','Nova assinatura',false); break;
+    case 'edit-field': editScalar(m,el.dataset.f,el.dataset.label,!!el.dataset.opt); break;
+    case 'edit-pf-total': editPfTotal(m); break;
+    case 'edit-next-pf':{const nx=nextOf(m); if(nx) editPfTotal(nx); break;}
+    case 'edit-next-pj':{const nx=nextOf(m); if(nx) editScalar(nx,'pjEst','Fatura Nu PJ estimada',false); break;}
+    case 'settings': openSettings(); break;
+    case 'new-month': createNextMonth(); break;
+    case 'close-sheet': closeSheet(); break;
+    case 'save-sheet': saveSheet(); break;
+    case 'delete-sheet':{
+      const b=$('del-btn');
+      if(!b.dataset.sure){b.dataset.sure='1';b.textContent='Tocar de novo para excluir';}
+      else {const sh=S.sheet; closeSheet(); sh.del();}
+      break;}
+  }
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&S.sheet) closeSheet();
+  if(e.key==='Enter'&&S.sheet&&e.target.tagName==='INPUT') saveSheet();
+});
+function readHash(){
+  const h=location.hash.replace('#','');
+  S.tab=TABS.indexOf(h)>=0?h:'visao';
+}
+window.addEventListener('hashchange',()=>{readHash();render();window.scrollTo(0,0);});
+
+/* ---------- dados ---------- */
+function ensureCur(){
+  if(S.cur&&S.months.some(x=>x.id===S.cur)) return;
+  let saved=null; try{saved=localStorage.getItem('fin-cur')}catch(_){}
+  S.cur=(saved&&S.months.some(x=>x.id===saved))?saved:(S.months.length?S.months[S.months.length-1].id:null);
+}
+async function start(){
+  readHash(); render();
+  let ok=false; try{ok=await LocalStore.init();}catch(_){ok=false;}
+  if(!ok){S.status='nodb';render();return;}
+  const db=LocalStore; S.db=db;
+  db.doc('config/settings').onSnapshot(s=>{
+    if(s.exists){const d=s.data(); if(isNum(d.meta)) S.meta=d.meta;}
+    if(S.status==='ready') render();
+  });
+  db.doc('config/backup').onSnapshot(s=>{S.bk=s.exists?s.data():null; if(S.status==='ready') render();});
+  if(!S.bk) await db.doc('config/backup').set({firstUse:new Date().toISOString(),at:null});
+  S.persisted=await db.persisted(); S.hasRestore=!!(await db.restorePoint());
+  db.collection('months').onSnapshot(snap=>{
+    S.months=snap.docs.map(d=>Object.assign({id:d.id},d.data())).sort((a,b)=>a.id<b.id?-1:1);
+    S.status=S.months.length?'ready':'empty';
+    ensureCur(); render();
+  });
+}
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+start();
+})();
+</script>
+</body>
+</html>
