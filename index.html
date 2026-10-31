@@ -611,7 +611,7 @@ function saveSheet(){
     return;
   }
   if(typeof r==='string'){$('sheet-err').textContent=r;return;}
-  closeSheet();
+  if(S.sheet===sh) closeSheet();
 }
 
 /* ---------- ações ---------- */
@@ -670,7 +670,7 @@ function createNextMonth(){
   enqueue('m/'+id,()=>S.db.doc('months/'+id).set(doc)).then(()=>{S.cur=id;S.tab='visao';render();toast(doc.label+' criado a partir de '+(base.label||monthLabel(base.id))+'.');})
     .catch(e=>toast(failMsg(e)));
 }
-const APP_VERSION='1.1.0';
+const APP_VERSION='1.1.1';
 const fmtDia=iso=>{const d=new Date(iso);return isNaN(d)?'—':d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});};
 function openSettings(){
   const last=S.months[S.months.length-1];
@@ -697,13 +697,19 @@ function openExport(){
       openSheet({title:'Backup pronto',hint:'Toque em Salvar e escolha o Google Drive ou Arquivos. Guarde-o fora do iPhone.',saveLabel:'Salvar / compartilhar',fields:[],save:shareFile});
     }});
 }
+function askSaved(){
+  const nome=S.pendingFile?S.pendingFile.name:'o arquivo de backup';
+  openSheet({title:'O arquivo foi salvo?',hint:'Abra o Google Drive ou Arquivos e confira se "'+nome+'" apareceu lá. Só confirme depois de ver o arquivo.',saveLabel:'Sim, vi o arquivo',fields:[],
+    extras:[{a:'share-again',label:'Tentar salvar de novo'}],
+    save:()=>marcarBackup().then(()=>{S.pendingFile=null;toast('Backup registrado.');})});
+}
 function shareFile(){
   const file=S.pendingFile; if(!file) return 'Crie o arquivo de novo.';
   if(navigator.canShare&&navigator.canShare({files:[file]})){
-    return navigator.share({files:[file],title:'Backup do Painel Financeiro'}).then(()=>marcarBackup()).then(()=>{S.pendingFile=null;toast('Backup salvo.');},
-      e=>(e&&e.name==='AbortError')?'Cancelado. Toque de novo para salvar.':(baixar(file),marcarBackup().then(()=>{S.pendingFile=null;toast('Arquivo baixado.');})));
+    return navigator.share({files:[file]}).then(()=>{askSaved();},
+      e=>{ if(e&&e.name==='AbortError') return 'Cancelado. Toque de novo para salvar.'; baixar(file); askSaved(); });
   }
-  baixar(file); S.pendingFile=null; marcarBackup(); toast('Arquivo baixado.');
+  baixar(file); askSaved();
 }
 function resumoBackup(c){
   const ids=Object.keys(c.docs).filter(k=>k.startsWith('months/')).map(k=>k.slice(7)).sort();
@@ -731,6 +737,7 @@ document.addEventListener('click',e=>{
   const a=el.dataset.a, m=getCur();
   switch(a){
     case 'tab': location.hash=el.dataset.v; break;
+    case 'share-again': shareFile(); break;
     case 'export-backup': closeSheet(); openExport(); break;
     case 'import-backup': closeSheet(); $('filein').click(); break;
     case 'restore-point': closeSheet(); LocalStore.restorePoint().then(r=>{ if(!r){toast('Nada para desfazer.');return;}

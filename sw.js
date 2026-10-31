@@ -1,5 +1,5 @@
 /* Só guarda os arquivos do app para abrir offline. Nunca toca nos dados (IndexedDB). */
-const CACHE='painel-v1.1.0';
+const CACHE='painel-v1.1.1';
 const FILES=['./','index.html','backup.js','store.js','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k.startsWith('painel-')).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
